@@ -1,0 +1,197 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "mysql"
+    url      = env("DATABASE_URL")
+}
+
+// schema.prisma
+
+model User {
+    UserID    String            @id @default(uuid())
+    Email     String            @unique
+    Password  String
+    isActive  Boolean           @default(false)
+    Role      String
+    Address   Address[]
+    AdminLogs AdminLog[]
+    Trophy    Trophy[]
+    Organizer OrganizerDetail[]
+    Otp       Otp[]
+}
+
+model Address {
+    AddressID String @id @default(uuid())
+    Line      String
+    City      String
+    StateName String
+    Pincode   String
+    UserId    String
+    User      User   @relation(fields: [UserId], references: [UserID])
+    // UserAddress User[]
+}
+
+model OrganizerDetail {
+    OrganizerDetailID String  @id @default(uuid())
+    UserID            String
+    FirstName         String
+    LastName          String
+    Phone             String
+    Image             String?
+    User              User    @relation(fields: [UserID], references: [UserID])
+}
+
+model Trophy {
+    TrophyID    String   @id @default(uuid())
+    TrophyName  String
+    OrganizerID String
+    StartDate   DateTime
+    EndDate     DateTime
+    Format      String
+    Venue       String
+    Image       String?
+    Organizer   User     @relation(fields: [OrganizerID], references: [UserID])
+    Teams       Team[]
+    Match       Match[]
+}
+
+model Team {
+    TeamID      String    @id @default(uuid())
+    TeamName    String
+    TrophyID    String
+    Trophy      Trophy    @relation(fields: [TrophyID], references: [TrophyID])
+    Image       String?
+    Players     Player[]
+    Matches1    Match[]   @relation("MatchTeam1")
+    Matches2    Match[]   @relation("MatchTeam2")
+    BattingTeam Innings[] @relation("InningsBattingTeam")
+    BowlingTeam Innings[] @relation("InningsBowlingTeam")
+}
+
+model Player {
+    PlayerID        String      @id @default(uuid())
+    FirstName       String
+    LastName        String
+    TeamID          String
+    IsWicketKeeper  Boolean
+    IsCaptain       Boolean
+    IsViseCaptain   Boolean
+    DOB             DateTime?
+    Role            String? // Batsman Bowler or All Rounder
+    BattingStyle    String?
+    BowlingStyle    String?
+    Team            Team        @relation(fields: [TeamID], references: [TeamID])
+    Image           String?
+    Innings         Innings[]
+    Scorecard       Scorecard[]
+    Over            Over[]
+    OnStrikeInnings Innings[]   @relation("CurrentBatsmanOnStrike")
+}
+
+// model PlayerTeam {
+//   PlayerID     String
+//   TeamID       String
+//   Player       Player @relation("PlayerTeamPlayer", fields: [PlayerID], references: [PlayerID])
+//   Team         Team   @relation("PlayerTeamTeam", fields: [TeamID], references: [TeamID])
+//   @@id([PlayerID, TeamID])
+// }
+
+model Match {
+    MatchID       String    @id @default(uuid())
+    TrophyID      String
+    Team1ID       String
+    Team2ID       String
+    MatchDateTime DateTime
+    Venue         String
+    Result        String
+    Trophy        Trophy    @relation(fields: [TrophyID], references: [TrophyID])
+    Team1         Team      @relation("MatchTeam1", fields: [Team1ID], references: [TeamID])
+    Team2         Team      @relation("MatchTeam2", fields: [Team2ID], references: [TeamID])
+    Innings       Innings[]
+}
+
+model Innings {
+    InningsID              String      @id @default(uuid())
+    MatchID                String
+    BattingTeamID          String
+    BowlingTeamID          String
+    TotalRuns              Int
+    TotalWickets           Int
+    WicketKeeperID         String?
+    CurrOver               Float
+    BatsmanStrikeId        String
+    Match                  Match       @relation(fields: [MatchID], references: [MatchID])
+    BattingTeam            Team        @relation("InningsBattingTeam", fields: [BattingTeamID], references: [TeamID])
+    BowlingTeam            Team        @relation("InningsBowlingTeam", fields: [BowlingTeamID], references: [TeamID])
+    WicketKeeper           Player?     @relation(fields: [WicketKeeperID], references: [PlayerID])
+    CurrentBatsmanOnStrike Player      @relation("CurrentBatsmanOnStrike", fields: [BatsmanStrikeId], references: [PlayerID])
+    Scorecards             Scorecard[]
+    Over                   Over[]
+}
+
+model Scorecard {
+    ScorecardID  String       @id @default(uuid())
+    InningsID    String
+    PlayerID     String
+    WicketsTaken Int
+    RunsScored   Int
+    BallsFaced   Int
+    Sixes        Int
+    Fours        Int
+    Innings      Innings      @relation(fields: [InningsID], references: [InningsID])
+    Player       Player       @relation(fields: [PlayerID], references: [PlayerID])
+    BowlByBowls  BowlByBowl[]
+}
+
+model BowlByBowl {
+    BowlByBowlID String    @id @default(uuid())
+    ScorecardID  String
+    OverNumber   Int
+    BallNumber   Int
+    RunsScored   Int
+    WicketTaken  Boolean
+    ExtraRuns    Int
+    Scorecard    Scorecard @relation(fields: [ScorecardID], references: [ScorecardID])
+}
+
+model Over {
+    OverID       String  @id @default(uuid())
+    InningsID    String
+    BowlerID     String
+    OverNumber   Int
+    MaidenOver   Boolean @default(false)
+    RunsConceded Int
+    WicketsTaken Int
+    Extras       Int
+    Balls        Ball[]
+    Innings      Innings @relation(fields: [InningsID], references: [InningsID])
+    Bowler       Player  @relation(fields: [BowlerID], references: [PlayerID])
+}
+
+model Ball {
+    BallID      String  @id @default(uuid())
+    OverID      String
+    BallNumber  Int
+    RunsScored  Int
+    WicketTaken Boolean
+    Extras      Int
+    Over        Over    @relation(fields: [OverID], references: [OverID])
+}
+
+model Otp {
+    OtpID  String   @id @default(uuid())
+    UserID String
+    Code   String
+    Expiry DateTime @default(now())
+    User   User     @relation(fields: [UserID], references: [UserID])
+}
+
+model AdminLog {
+    LogID             String   @id @default(uuid())
+    UserID            String
+    ActionDateTime    DateTime
+    ActionDescription String
+    User              User     @relation(fields: [UserID], references: [UserID])
+}

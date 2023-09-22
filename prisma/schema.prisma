@@ -1,0 +1,307 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  UserID     String            @id @default(uuid())
+  Email      String            @unique
+  Password   String
+  isActive   Boolean           @default(false)
+  Role       String
+  Created_At DateTime?         @default(now())
+  Updated_At DateTime?         @default(now())
+  Address    Address[]
+  AdminLogs  AdminLog[]
+  Trophy     Trophy[]
+  Organizer  OrganizerDetail[]
+  Otp        Otp[]
+}
+
+model Address {
+  AddressID  String    @id @default(uuid())
+  Line       String
+  City       String
+  StateName  String
+  Pincode    String
+  UserId     String
+  Created_At DateTime? @default(now())
+  Updated_At DateTime? @default(now())
+  User       User      @relation(fields: [UserId], references: [UserID])
+}
+
+model OrganizerDetail {
+  OrganizerDetailID String    @id @default(uuid())
+  UserID            String
+  FirstName         String
+  LastName          String
+  Phone             String
+  Image             String?
+  Created_At        DateTime? @default(now())
+  Updated_At        DateTime? @default(now())
+  User              User      @relation(fields: [UserID], references: [UserID])
+}
+
+model Trophy {
+  TrophyID    String       @id @default(uuid())
+  TrophyName  String
+  OrganizerID String
+  StartDate   DateTime
+  EndDate     DateTime
+  Format      String
+  Venue       String
+  Image       String?
+  Created_At  DateTime?    @default(now())
+  Updated_At  DateTime?    @default(now())
+  Organizer   User         @relation(fields: [OrganizerID], references: [UserID])
+  Match       Match[]
+  TeamTrophy  TeamTrophy[]
+}
+
+model Team {
+  TeamID      String       @id @default(uuid())
+  TeamName    String
+  Image       String?
+  ShortName   String       @default("")
+  Created_At  DateTime?    @default(now())
+  Updated_At  DateTime?    @default(now())
+  TeamTrophy  TeamTrophy[]
+  PlayerTeam  PlayerTeam[]
+  Matches1    Match[]      @relation("MatchTeam1")
+  Matches2    Match[]      @relation("MatchTeam2")
+  // TossWin     Match[]      @relation("TeamToss")
+  BattingTeam Innings[]    @relation("InningsBattingTeam")
+  BowlingTeam Innings[]    @relation("InningsBowlingTeam")
+
+  Playing11 Playing11[]
+}
+
+model Player {
+  PlayerID        String            @id @default(uuid())
+  FirstName       String
+  LastName        String
+  Phone           String
+  DOB             DateTime?
+  Role            String?
+  BattingStyle    String?
+  BowlingStyle    String?
+  Image           String?
+  Created_At      DateTime?         @default(now())
+  Updated_At      DateTime?         @default(now())
+  PlayerTeams     PlayerTeam[]
+  PlayerInnings   PlayerInning[]
+  OnStrikePlayer  Innings[]         @relation("CurrentBatsmanOnStrike")
+  NonStrikePlayer Innings[]         @relation("CurrentBatsmanNonStrike")
+  Bowler          Innings[]         @relation("CurreBowler")
+  Over            Over[]
+  Playing11Player Playing11Player[]
+  Out             Out[]
+}
+
+model TeamTrophy {
+  TeamTrophyID String    @id @default(uuid())
+  TeamID       String
+  TrophyID     String
+  Created_At   DateTime? @default(now())
+  Updated_At   DateTime? @default(now())
+  Team         Team      @relation(fields: [TeamID], references: [TeamID])
+  trophy       Trophy    @relation(fields: [TrophyID], references: [TrophyID])
+}
+
+model PlayerTeam {
+  PlayerTeamID String    @id @default(uuid())
+  PlayerID     String
+  TeamID       String
+  Created_At   DateTime? @default(now())
+  Updated_At   DateTime? @default(now())
+  Player       Player    @relation(fields: [PlayerID], references: [PlayerID])
+  Team         Team      @relation(fields: [TeamID], references: [TeamID])
+}
+
+model Playing11 {
+  Playing11ID     String            @id @default(uuid())
+  MatchID         String
+  TeamID          String
+  Wk              String?
+  Cap             String?
+  VCap            String?
+  Created_At      DateTime?         @default(now())
+  Updated_At      DateTime?         @default(now())
+  Match           Match             @relation(fields: [MatchID], references: [MatchID])
+  Team            Team              @relation(fields: [TeamID], references: [TeamID])
+  Playing11Player Playing11Player[]
+}
+
+model Playing11Player {
+  Playing11PlayerID String    @id @default(uuid())
+  PlayerID          String
+  Playing11ID       String
+  Created_At        DateTime? @default(now())
+  Updated_At        DateTime? @default(now())
+  Player            Player    @relation(fields: [PlayerID], references: [PlayerID])
+  Playing11         Playing11 @relation(fields: [Playing11ID], references: [Playing11ID])
+}
+
+// model PlayerScorecard {
+//   PlayerID      String
+//   ScorecardID   String
+//   Player        Player    @relation(fields: [PlayerID], references: [PlayerID])
+//   Scorecard     Scorecard @relation(fields: [ScorecardID], references: [ScorecardID])
+//   @@id([PlayerID, ScorecardID])
+// }
+
+model Match {
+  MatchID     String      @id @default(uuid())
+  TrophyID    String
+  Team1ID     String
+  Team2ID     String
+  MatchStatus Int         @default(0)
+  // 0.Match Scheduled 1.Toss Done 2.First Inning Started 3.Inning Break 4.Second Inning Statred 5.Match Finished 6.Match Tie 7.Match draw 8.Match 10.Match Stopped
+  MatchNumber Int
+  TossWin     String?
+  Choose      String?
+  MatchTime   DateTime?
+  MatchDate   DateTime?
+  Created_At  DateTime?   @default(now())
+  Updated_At  DateTime?   @default(now())
+  Ground      String      @default("")
+  Result      String
+  Trophy      Trophy      @relation(fields: [TrophyID], references: [TrophyID])
+  Team1       Team        @relation("MatchTeam1", fields: [Team1ID], references: [TeamID])
+  Team2       Team        @relation("MatchTeam2", fields: [Team2ID], references: [TeamID])
+  Innings     Innings[]
+  Playing11   Playing11[]
+}
+
+model Innings {
+  InningsID               String         @id @default(uuid())
+  MatchID                 String
+  BattingTeamID           String
+  BowlingTeamID           String
+  TotalRuns               Int
+  TotalWickets            Int
+  WicketKeeperID          String?
+  CurrOver                Float
+  BatsmanStrikeId         String
+  BatsmanNonStrikeId      String
+  CurrBowlerId            String
+  InningEnded             Boolean        @default(false)
+  Created_At              DateTime?      @default(now())
+  Updated_At              DateTime?      @default(now())
+  Match                   Match          @relation(fields: [MatchID], references: [MatchID])
+  BattingTeam             Team           @relation("InningsBattingTeam", fields: [BattingTeamID], references: [TeamID])
+  BowlingTeam             Team           @relation("InningsBowlingTeam", fields: [BowlingTeamID], references: [TeamID])
+  CurrentBatsmanOnStrike  Player         @relation("CurrentBatsmanOnStrike", fields: [BatsmanStrikeId], references: [PlayerID])
+  CurrentBatsmanNonStrike Player         @relation("CurrentBatsmanNonStrike", fields: [BatsmanNonStrikeId], references: [PlayerID])
+  CurrBowlerStrike        Player         @relation("CurreBowler", fields: [CurrBowlerId], references: [PlayerID])
+  Scorecards              Scorecard[]
+  PlayerInning            PlayerInning[]
+  Over                    Over[]
+  Out                     Out[]
+}
+
+model PlayerInning {
+  PlayerInningID String      @id @default(uuid())
+  PlayerID       String
+  InningsID      String
+  Status         String // Values: "in", "out", "yet to bat", etc.
+  Created_At     DateTime?   @default(now())
+  Updated_At     DateTime?   @default(now())
+  Player         Player      @relation(fields: [PlayerID], references: [PlayerID])
+  Innings        Innings     @relation(fields: [InningsID], references: [InningsID])
+  Scorecard      Scorecard[]
+}
+
+model Scorecard {
+  ScorecardID    String       @id @default(uuid())
+  InningsID      String
+  PlayerInningID String
+  RunsScored     Int
+  BallsFaced     Int
+  Sixes          Int
+  Fours          Int
+  Created_At     DateTime?    @default(now())
+  Updated_At     DateTime?    @default(now())
+  Innings        Innings      @relation(fields: [InningsID], references: [InningsID])
+  PlayerInning   PlayerInning @relation(fields: [PlayerInningID], references: [PlayerInningID])
+  // BowlByBowls BowlByBowl[]
+}
+
+// model BowlByBowl {
+//   BowlByBowlID String    @id @default(uuid())
+//   ScorecardID  String
+//   OverNumber   Int
+//   BallNumber   Int
+//   RunsScored   Int
+//   WicketTaken  Boolean
+//   ExtraRuns    Int
+//   Scorecard    Scorecard @relation(fields: [ScorecardID], references: [ScorecardID])
+// }
+
+model Out {
+  OutID      String    @id @default(uuid())
+  PlayerID   String
+  InningID   String
+  How        String // Values like "run out", "bowled", "lbw", "catch", "hit-wicket" "stump"
+  BowlerID   String? // Nullable, for storing the bowler's ID
+  ThrowerID  String? // Nullable, for storing the player who threw the ball (relevant for run out)
+  CatcherID  String? // Nullable, for storing the player who caught the ball (relevant for catch)
+  RunOuterID String? // Nullable, for storing the player who run out the player (relevant for run out)
+  Created_At DateTime? @default(now())
+  Updated_At DateTime? @default(now())
+  Player     Player    @relation(fields: [PlayerID], references: [PlayerID])
+  Inning     Innings   @relation(fields: [InningID], references: [InningsID])
+}
+
+model Over {
+  OverID       String    @id @default(uuid())
+  InningsID    String
+  BowlerID     String
+  OverNumber   Int
+  MaidenOver   Boolean   @default(false)
+  RunsConceded Int       @default(0)
+  WicketsTaken Int       @default(0)
+  Extras       Int       @default(0)
+  Created_At   DateTime? @default(now())
+  Updated_At   DateTime? @default(now())
+  Balls        Ball[]
+  Innings      Innings   @relation(fields: [InningsID], references: [InningsID])
+  Bowler       Player    @relation(fields: [BowlerID], references: [PlayerID])
+}
+
+model Ball {
+  BallID      String    @id @default(uuid())
+  OverID      String
+  BallNumber  Int
+  RunsScored  Int
+  WicketTaken Boolean   @default(false)
+  Extras      Int
+  key         String? // wd nb nbe lb bys
+  Created_At  DateTime? @default(now())
+  Updated_At  DateTime? @default(now())
+  Over        Over      @relation(fields: [OverID], references: [OverID])
+}
+
+model Otp {
+  OtpID      String    @id @default(uuid())
+  UserID     String
+  Code       String
+  Expiry     DateTime  @default(now())
+  Created_At DateTime? @default(now())
+  Updated_At DateTime? @default(now())
+  User       User      @relation(fields: [UserID], references: [UserID])
+}
+
+model AdminLog {
+  LogID             String    @id @default(uuid())
+  UserID            String
+  ActionDateTime    DateTime
+  ActionDescription String
+  Created_At        DateTime? @default(now())
+  Updated_At        DateTime? @default(now())
+  User              User      @relation(fields: [UserID], references: [UserID])
+}
